@@ -12,6 +12,10 @@ public class ImageDownloader : MonoBehaviour
     [SerializeField] private InputField[] _inputFields;
     [SerializeField] private Text currentUrl;
     [SerializeField] private Text curentFailed;
+    [SerializeField] private GameObject darkPanel;
+    [SerializeField] private GameObject startButton;
+    [SerializeField] private GameObject stopButton;
+    [SerializeField] private Toggle overwriteToggle;
     
     public string[] urlParts = null;
     public string totalUrl = "";
@@ -21,20 +25,46 @@ public class ImageDownloader : MonoBehaviour
 
     private void Start()
     {
+        Application.targetFrameRate = 10;
+        Screen.sleepTimeout = SleepTimeout.NeverSleep;
+        
         //Save Path init
         savePathFolder = Path.Combine(Application.persistentDataPath, "data");
         savePathFolder = Path.Combine(savePathFolder, "images");
+        
+        if (PlayerPrefs.GetString("year") != "")
+        {
+            LoadFromSave();
+        }
     }
     public void StartDownload()
     {
-        urlParts[1]= _inputFields[0].text;
-        urlParts[2]= _inputFields[1].text;
-        urlParts[4]= _inputFields[2].text;
+        startButton.SetActive(false);
+        urlParts[1] = _inputFields[0].text;
+        urlParts[2] = _inputFields[1].text;
+        urlParts[4] = _inputFields[2].text;
+        
         StartCoroutine(SubMain());
     }
     public void StopDownload()
     {
         StopAllCoroutines();
+        startButton.SetActive(true);
+    }
+
+    public void LoadFromSave()
+    {
+        _inputFields[0].text = PlayerPrefs.GetString("year");
+        _inputFields[1].text = PlayerPrefs.GetString("month");
+        _inputFields[2].text = PlayerPrefs.GetString("number");
+        
+        faildTimes = PlayerPrefs.GetInt("failed");
+        curentFailed.text = faildTimes.ToString();
+    }
+
+    public void TogglePanel()
+    {
+        darkPanel.SetActive(!darkPanel.activeSelf);
     }
 
     private IEnumerator SubMain()
@@ -48,7 +78,7 @@ public class ImageDownloader : MonoBehaviour
         
         //print("wow "+ savePath);
         //if file exist don't download it even if its broken!
-         if (File.Exists(savePath))
+         if (!overwriteToggle.isOn && File.Exists(savePath))
          {
              print("file skipped");
              GoToNextUrl();
@@ -93,6 +123,7 @@ public class ImageDownloader : MonoBehaviour
                 {
                     Debug.Log("png failed");
                     faildTimes ++;
+                    SaveLink();
                     if (faildTimes > 20)
                     {
                         faildTimes = 0;
@@ -109,13 +140,26 @@ public class ImageDownloader : MonoBehaviour
         yield return null;
     }
 
+    private void SaveLink()
+    {
+        PlayerPrefs.SetString("year", urlParts[1]);
+        PlayerPrefs.SetString("month", urlParts[2]);
+        PlayerPrefs.SetString("number", urlParts[4]);
+        PlayerPrefs.SetInt("failed", faildTimes);
+    }
+
     private void MakeUrl()
     {
         totalUrl = "";
+        if (urlParts[2].Length < 2)
+        {
+            urlParts[2] = "0" + urlParts[2];
+        }
         foreach (var item in urlParts)
         {
             totalUrl += item;
         }
+        SaveLink();
         //Debug.Log(totalUrl);
     }
 
